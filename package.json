@@ -1,0 +1,82 @@
+{
+	"name": "@liiift-studio/speechtype",
+	"version": "0.0.1",
+	"description": "Typography that follows your voice — per-word typographic emphasis synced to Web Speech API boundary events",
+	"type": "module",
+	"main": "dist/index.cjs",
+	"module": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "vite build",
+		"test": "vitest run",
+		"typecheck": "tsc --noEmit",
+		"prepublishOnly": "npm run test && npm run build"
+	},
+	"peerDependencies": {
+		"react": ">=17",
+		"react-dom": ">=17"
+	},
+	"peerDependenciesMeta": {
+		"react": {
+			"optional": true
+		},
+		"react-dom": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@types/react": "^19.0.0",
+		"@vitejs/plugin-react": "^4.0.0",
+		"happy-dom": "^12.0.0",
+		"next": "16.2.2",
+		"react": "^19.0.0",
+		"typescript": "^5.0.0",
+		"vite": "^6.0.0",
+		"vite-plugin-dts": "^4.0.0",
+		"vitest": "^3.0.0"
+	},
+	"keywords": [
+		"typography",
+		"speech-synthesis",
+		"web-speech-api",
+		"karaoke",
+		"accessibility",
+		"a11y",
+		"language-learning",
+		"variable-font",
+		"font-variation-settings",
+		"wght",
+		"opsz",
+		"letter-spacing",
+		"word-highlight",
+		"teleprompter",
+		"zero-dependencies",
+		"react",
+		"typescript",
+		"css"
+	],
+	"author": "Quinn Keaveney <quinn@liiift.studio>",
+	"license": "MIT",
+	"homepage": "https://speechtype.com",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Liiift-Studio/SpeechType.git"
+	},
+	"bugs": {
+		"url": "https://github.com/Liiift-Studio/SpeechType/issues"
+	},
+	"sideEffects": false,
+	"publishConfig": {
+		"access": "public"
+	}
+}
