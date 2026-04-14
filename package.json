@@ -1,6 +1,6 @@
 {
 	"name": "@liiift-studio/speechtype",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"description": "Typography that follows your voice — per-word typographic emphasis synced to Web Speech API boundary events",
 	"type": "module",
 	"main": "dist/index.cjs",
@@ -67,7 +67,7 @@
 	],
 	"author": "Quinn Keaveney <quinn@liiift.studio>",
 	"license": "MIT",
-	"homepage": "https://speechtype.com",
+	"homepage": "https://speechtype.liiift-studio.com",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Liiift-Studio/SpeechType.git"
