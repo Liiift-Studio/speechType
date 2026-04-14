@@ -67,7 +67,7 @@
 	],
 	"author": "Quinn Keaveney <quinn@liiift.studio>",
 	"license": "MIT",
-	"homepage": "https://speechtype.liiift-studio.com",
+	"homepage": "https://speechtype.vercel.app",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Liiift-Studio/SpeechType.git"
