@@ -1,13 +1,8 @@
 import type { Metadata } from "next"
 import "./globals.css"
-import { Merriweather } from "next/font/google"
+import { Inter } from "next/font/google"
 
-const merriweather = Merriweather({
-	weight: ['300', '700'],
-	style: ['normal', 'italic'],
-	subsets: ["latin"],
-	variable: "--font-merriweather",
-})
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
 	title: "speechType — Typography that follows your voice",
@@ -31,7 +26,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
 	return (
-		<html lang="en" className={`h-full antialiased ${merriweather.variable}`}>
+		<html lang="en" className={`h-full antialiased ${inter.variable}`}>
 			<body className="min-h-full flex flex-col">{children}</body>
 		</html>
 	)
