@@ -61,7 +61,7 @@ export function prepareSpeechType(el: HTMLElement, options: SpeechTypeOptions = 
 	const text = el.textContent ?? ''
 	const tokens = text.split(/(\s+)/)
 	el.innerHTML = tokens.map(token => {
-		if (/^\s+$/.test(token)) return token
+		if (!token || /^\s+$/.test(token)) return token
 		return `<span class="${SPEECH_CLASSES.word}">${token}</span>`
 	}).join('')
 
