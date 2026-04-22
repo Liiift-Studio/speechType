@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 	openGraph: {
 		title: "speechType — Typography that follows your voice",
 		description: "Per-word typographic emphasis synced to Web Speech API boundary events. Each spoken word receives wider tracking and heavier weight.",
-		url: "https://speechtype.vercel.app",
+		url: "https://speechtype.com",
 		siteName: "speechType",
 		type: "website",
 	},
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 		title: "speechType — Typography that follows your voice",
 		description: "Per-word typographic emphasis synced to Web Speech API boundary events.",
 	},
-	metadataBase: new URL("https://speechtype.vercel.app"),
+	metadataBase: new URL("https://speechtype.com"),
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
