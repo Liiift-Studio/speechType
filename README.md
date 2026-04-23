@@ -22,37 +22,36 @@ npm install @liiift-studio/speechtype
 
 > **Next.js App Router:** this library uses browser APIs. Add `"use client"` to any component file that imports from it.
 
-### React component
+### React component (controlled)
 
-`SpeechTypeText` is a controlled component — you manage the active word index and pass it as a prop. This lets you drive it from any speech source (Web Speech API, a timer, a remote event, or a custom synthesis engine).
+`SpeechTypeText` is a controlled component — you manage a `SpeechSynthesisUtterance` yourself, track which word is active in state, and pass the index as a prop. This pattern gives you full control over voice, timing, and UI.
 
 ```tsx
-import { SpeechTypeText, startSpeechType } from '@liiift-studio/speechtype'
-import { useRef, useState } from 'react'
+"use client"
+import { SpeechTypeText } from '@liiift-studio/speechtype'
+import { useState, useCallback } from 'react'
+
+const TEXT = 'The quick brown fox jumps over the lazy dog.'
 
 export default function Demo() {
   const [activeWordIndex, setActiveWordIndex] = useState(-1)
-  const ref = useRef<HTMLElement>(null)
 
-  function handleSpeak() {
-    if (!ref.current) return
-    const stop = startSpeechType(ref.current, {
-      activeWeight: 700,
-      activeTracking: 0.06,
-    })
-    // store stop() to call when done
-  }
+  const handleSpeak = useCallback(() => {
+    const utterance = new SpeechSynthesisUtterance(TEXT)
+    utterance.onboundary = (e) => {
+      if (e.name === 'word') {
+        const wordIndex = TEXT.slice(0, e.charIndex).trim().split(/\s+/).filter(Boolean).length
+        setActiveWordIndex(wordIndex)
+      }
+    }
+    utterance.onend = () => setActiveWordIndex(-1)
+    speechSynthesis.speak(utterance)
+  }, [])
 
   return (
     <>
-      <SpeechTypeText
-        ref={ref}
-        activeWordIndex={activeWordIndex}
-        activeWeight={700}
-        activeTracking={0.06}
-        inactiveOpacity={0.45}
-      >
-        The quick brown fox jumps over the lazy dog.
+      <SpeechTypeText activeWordIndex={activeWordIndex} activeWeight={700} inactiveOpacity={0.45}>
+        {TEXT}
       </SpeechTypeText>
       <button onClick={handleSpeak}>Speak</button>
     </>
@@ -60,23 +59,54 @@ export default function Demo() {
 }
 ```
 
-For a self-contained demo, use `startSpeechType` directly on the element after preparing it with `SpeechTypeText` (which wraps words in spans on mount).
+### React — imperative (startSpeechType)
+
+For a simpler setup, skip `SpeechTypeText` and let `startSpeechType` manage everything directly on a plain element ref:
+
+```tsx
+"use client"
+import { useRef } from 'react'
+import { startSpeechType, removeSpeechType } from '@liiift-studio/speechtype'
+
+export default function Demo() {
+  const ref = useRef<HTMLParagraphElement>(null)
+
+  function handleSpeak() {
+    if (!ref.current) return
+    startSpeechType(ref.current, { activeWeight: 700, rate: 0.9 })
+  }
+
+  function handleStop() {
+    if (ref.current) removeSpeechType(ref.current)
+  }
+
+  return (
+    <>
+      <p ref={ref}>The quick brown fox jumps over the lazy dog.</p>
+      <button onClick={handleSpeak}>Speak</button>
+      <button onClick={handleStop}>Stop</button>
+    </>
+  )
+}
+```
 
 ### React hook
 
-`useSpeechType` takes a ref, an active word index, and options. Your component controls the index — for example, by calling `startSpeechType` and tracking which word is current.
+`useSpeechType` is the low-level hook behind `SpeechTypeText`. Use it when you need the controlled pattern but want to render your own element:
 
 ```tsx
+"use client"
 import { useSpeechType } from '@liiift-studio/speechtype'
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 
-const ref = useRef<HTMLElement>(null)
-const [activeWordIndex, setActiveWordIndex] = useState(-1)
+export default function Demo() {
+  const ref = useRef<HTMLParagraphElement>(null)
+  const [activeWordIndex, setActiveWordIndex] = useState(-1)
 
-useSpeechType(ref, activeWordIndex, { activeWeight: 700 })
+  useSpeechType(ref, activeWordIndex, { activeWeight: 700 })
 
-return <p ref={ref}>The quick brown fox jumps over the lazy dog.</p>
-```
+  return <p ref={ref}>The quick brown fox jumps over the lazy dog.</p>
+}
 
 ### Vanilla JS
 
