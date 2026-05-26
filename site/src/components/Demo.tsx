@@ -113,6 +113,7 @@ export default function Demo() {
 					<div className="flex items-center gap-4">
 						<button
 							onClick={speaking ? handleStop : handleSpeak}
+							title={speaking ? 'Stop speech synthesis and reset emphasis' : 'Read the paragraph aloud using speech synthesis — each word is emphasised as it is spoken'}
 							className="flex items-center gap-2 text-sm px-4 py-2 rounded-full border transition-all"
 							style={{
 								borderColor: 'currentColor',
@@ -141,6 +142,7 @@ export default function Demo() {
 						step={1}
 						value={activeWordIndex}
 						aria-label="Word (manual step through spoken words)"
+						title="Step through words one at a time — each word is emphasised as if it were being spoken aloud"
 						onChange={e => {
 							if (speaking) handleStop()
 							setActiveWordIndex(Number(e.target.value))
@@ -163,6 +165,7 @@ export default function Demo() {
 						step={50}
 						value={activeWeight}
 						aria-label="Active word weight (wght axis value)"
+						title="Font weight applied to the spoken word — higher values make the active word bolder and more prominent"
 						onChange={e => setActiveWeight(Number(e.target.value))}
 						onTouchStart={e => e.stopPropagation()}
 						style={{ touchAction: 'none' }}
@@ -182,6 +185,7 @@ export default function Demo() {
 						step={0.05}
 						value={inactiveOpacity}
 						aria-label="Inactive word opacity"
+						title="Opacity of words that are not currently being spoken — lower values create stronger contrast between the active word and the rest"
 						onChange={e => setInactiveOpacity(Number(e.target.value))}
 						onTouchStart={e => e.stopPropagation()}
 						style={{ touchAction: 'none' }}
@@ -201,6 +205,7 @@ export default function Demo() {
 						step={0.1}
 						value={rate}
 						aria-label="Speech rate (0.5 = slow, 2.0 = fast)"
+						title="Speed at which the paragraph is read aloud — slower rates give the typography more time on each word; changing this restarts playback"
 						onChange={e => setRate(Number(e.target.value))}
 						onTouchStart={e => e.stopPropagation()}
 						style={{ touchAction: 'none' }}
@@ -220,6 +225,7 @@ export default function Demo() {
 						step={20}
 						value={transitionMs}
 						aria-label="Style transition duration in milliseconds"
+						title="How long the font-weight and opacity transition takes when emphasis moves from one word to the next — 0ms is instant, 300ms is a smooth fade"
 						onChange={e => setTransitionMs(Number(e.target.value))}
 						onTouchStart={e => e.stopPropagation()}
 						style={{ touchAction: 'none' }}
