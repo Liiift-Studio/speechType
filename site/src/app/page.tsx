@@ -15,8 +15,8 @@ export default function Home() {
 				<div className="flex flex-col gap-2">
 					<p className="text-xs uppercase tracking-widest opacity-50">speechtype</p>
 					<h1 className="text-4xl lg:text-8xl xl:text-9xl" style={{ fontFamily: "var(--font-merriweather), serif", fontVariationSettings: '"wght" 300, "opsz" 144', lineHeight: "1.05em" }}>
-						Typography that<br />
-						<span style={{ opacity: 0.5, fontStyle: "italic" }}>follows your voice.</span>
+						<MagnetChar as="span" minWeight={300} maxWeight={800} spreadRadius={220} fixedAxes={{ opsz: 144 }}>Typography that</MagnetChar><br />
+						<MagnetChar as="span" minWeight={300} maxWeight={800} spreadRadius={220} fixedAxes={{ opsz: 144 }} style={{ opacity: 0.5, fontStyle: "italic" }}>follows your voice.</MagnetChar>
 					</h1>
 				</div>
 				<div className="flex items-center gap-4">
@@ -91,6 +91,7 @@ const stop = startSpeechType(el, { rate: 0.9, activeWeight: 700 })
 						<p className="opacity-50">Hook — manual control with your own active index</p>
 						<CodeBlock code={`import { useSpeechType } from '@liiift-studio/speechtype'
 import { useRef } from 'react'
+import { MagnetChar } from "@liiift-studio/magnettype"
 
 // Inside a React component:
 const ref = useRef(null)
