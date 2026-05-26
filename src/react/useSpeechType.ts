@@ -17,14 +17,14 @@ export function useSpeechType(
 	activeWordIndex: number,
 	options?: SpeechTypeOptions,
 ): void {
-	// Prepare word spans on mount; clean up on unmount
+	// Re-prepare word spans whenever transitionMs changes; clean up on unmount
 	useEffect(() => {
 		const el = ref.current
 		if (!el) return
 		prepareSpeechType(el, options)
 		return () => removeSpeechType(el)
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [])
+	}, [options?.transitionMs])
 
 	// Apply emphasis whenever activeWordIndex changes
 	useEffect(() => {

@@ -1,7 +1,7 @@
 // speechType/src/__tests__/adjust.test.ts — unit tests for the core speechType algorithm
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { prepareSpeechType, applySpeechType, removeSpeechType, getCleanHTML } from '../core/adjust'
+import { prepareSpeechType, applySpeechType, removeSpeechType, getCleanHTML, startSpeechType } from '../core/adjust'
 import { SPEECH_CLASSES } from '../core/types'
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
@@ -168,6 +168,59 @@ describe('getCleanHTML', () => {
 		const el = makeEl('plain text')
 		const clean = getCleanHTML(el)
 		expect(clean).toBe('plain text')
+	})
+})
+
+// ─── startSpeechType ─────────────────────────────────────────────────────────
+
+describe('startSpeechType', () => {
+	it('calls speechSynthesis.speak with a SpeechSynthesisUtterance', () => {
+		const el = makeEl('hello world')
+		startSpeechType(el)
+		expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(1)
+		expect(window.SpeechSynthesisUtterance).toHaveBeenCalledTimes(1)
+	})
+
+	it('returns a stop function that cancels synthesis and resets spans', () => {
+		const el = makeEl('one two three')
+		const stop = startSpeechType(el)
+		// Activate a word so there is something to reset
+		applySpeechType(el, 0)
+		stop()
+		expect(window.speechSynthesis.cancel).toHaveBeenCalled()
+		// All spans should be reset to full opacity after stop
+		const spans = el.querySelectorAll<HTMLElement>(`.${SPEECH_CLASSES.word}`)
+		spans.forEach(span => {
+			expect(span.style.opacity).toBe('1')
+		})
+	})
+
+	it('simulates a boundary event and emphasises the correct word', () => {
+		const el = makeEl('alpha beta gamma')
+		startSpeechType(el)
+
+		// Grab the utterance that was passed to speak()
+		const utterance = (window.SpeechSynthesisUtterance as ReturnType<typeof vi.fn>).mock.results[0].value
+
+		// Simulate a 'word' boundary at charIndex 6 — 'alpha ' is 6 chars, so index 6 = 'beta'
+		utterance.onboundary?.({ name: 'word', charIndex: 6 } as SpeechSynthesisEvent)
+
+		const spans = el.querySelectorAll<HTMLElement>(`.${SPEECH_CLASSES.word}`)
+		// 'beta' is index 1 — should be full opacity
+		expect(spans[1].style.opacity).toBe('1')
+		// Others should be dimmed
+		expect(spans[0].style.opacity).not.toBe('1')
+		expect(spans[2].style.opacity).not.toBe('1')
+	})
+
+	it('is a no-op when speechSynthesis is unavailable (SSR-like)', () => {
+		const origSS = (window as Window & { speechSynthesis?: SpeechSynthesis }).speechSynthesis
+		// @ts-expect-error — simulate no speechSynthesis
+		delete window.speechSynthesis
+		const el = makeEl('test')
+		expect(() => startSpeechType(el)).not.toThrow()
+		// Restore
+		;(window as Window & { speechSynthesis?: SpeechSynthesis }).speechSynthesis = origSS
 	})
 })
 

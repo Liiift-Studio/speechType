@@ -3,8 +3,6 @@
 /** CSS class names used by speechType */
 export const SPEECH_CLASSES = {
 	word: 'st-word',
-	active: 'st-active',
-	inactive: 'st-inactive',
 } as const
 
 /** Options controlling how speechType emphasises spoken words */
