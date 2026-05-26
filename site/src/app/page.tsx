@@ -91,7 +91,6 @@ const stop = startSpeechType(el, { rate: 0.9, activeWeight: 700 })
 						<p className="opacity-50">Hook — manual control with your own active index</p>
 						<CodeBlock code={`import { useSpeechType } from '@liiift-studio/speechtype'
 import { useRef } from 'react'
-import { MagnetChar } from "@liiift-studio/magnettype"
 
 // Inside a React component:
 const ref = useRef(null)

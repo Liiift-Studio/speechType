@@ -107,6 +107,7 @@ export default function Demo() {
 
   return <p ref={ref}>The quick brown fox jumps over the lazy dog.</p>
 }
+```
 
 ### Vanilla JS
 
