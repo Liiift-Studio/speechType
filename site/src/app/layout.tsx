@@ -22,6 +22,7 @@ export const metadata: Metadata = {
 		description: "Per-word typographic emphasis synced to Web Speech API boundary events. Each spoken word receives wider tracking, heavier weight, and larger optical size.",
 	},
 	metadataBase: new URL("https://speechtype.com"),
+	alternates: { canonical: "https://speechtype.com" },
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

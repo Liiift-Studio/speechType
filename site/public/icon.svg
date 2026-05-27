@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="hsl(295,50%,10%)"/>
+  <!-- Text lines — the currently-spoken word is larger and brighter -->
+  <rect x="8" y="11" width="14" height="7" rx="3.5" fill="#f0ece3" opacity="0.4"/>
+  <rect x="25" y="8" width="20" height="13" rx="5" fill="#f0ece3"/>
+  <rect x="48" y="11" width="8" height="7" rx="3.5" fill="#f0ece3" opacity="0.4"/>
+  <!-- Second and third text lines (unspoken) -->
+  <rect x="8" y="28" width="48" height="7" rx="3.5" fill="#f0ece3" opacity="0.3"/>
+  <rect x="8" y="40" width="36" height="7" rx="3.5" fill="#f0ece3" opacity="0.3"/>
+  <!-- Sound wave arcs emanating from lower-left -->
+  <circle cx="12" cy="56" r="2.5" fill="#f0ece3" opacity="0.75"/>
+  <path d="M 18 61 Q 22 56 18 51" stroke="#f0ece3" stroke-width="2" fill="none" opacity="0.65" stroke-linecap="round"/>
+  <path d="M 24 63 Q 30 56 24 49" stroke="#f0ece3" stroke-width="2" fill="none" opacity="0.4" stroke-linecap="round"/>
+</svg>
