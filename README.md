@@ -70,14 +70,20 @@ import { startSpeechType, removeSpeechType } from '@liiift-studio/speechtype'
 
 export default function Demo() {
   const ref = useRef<HTMLParagraphElement>(null)
+  // stop() cancels speech and resets emphasis but keeps spans in place.
+  // removeSpeechType() does a full teardown — cancels speech AND restores original HTML.
+  // Call stop() for pause/stop controls; call removeSpeechType() only on unmount or full reset.
+  const stopRef = useRef<(() => void) | null>(null)
 
   function handleSpeak() {
     if (!ref.current) return
-    startSpeechType(ref.current, { activeWeight: 700, rate: 0.9 })
+    stopRef.current?.()  // cancel any in-progress speech first
+    stopRef.current = startSpeechType(ref.current, { activeWeight: 700, rate: 0.9 })
   }
 
   function handleStop() {
-    if (ref.current) removeSpeechType(ref.current)
+    stopRef.current?.()
+    stopRef.current = null
   }
 
   return (
@@ -174,7 +180,7 @@ const opts: SpeechTypeOptions = {
 
 ## How it works
 
-`prepareSpeechType` walks the element's child nodes and wraps each word in a `<span class="st-word">` — without changing visual layout. `applySpeechType` then uses `activeWordIndex` to toggle `st-active` / `st-inactive` classes on each span. The active span receives `letter-spacing`, `font-variation-settings`, and CSS transitions via the class; the inactive spans get reduced opacity. All style changes are CSS class toggles — no inline style thrashing.
+`prepareSpeechType` reads the element's text content and wraps each word in a `<span class="st-word">` — without changing visual layout. Note: inline child elements (`<em>`, `<strong>`, `<a>`, etc.) are flattened to plain text during wrapping. `applySpeechType` then writes `font-variation-settings`, `letter-spacing`, and `opacity` as inline styles directly on each span (no CSS class toggles). The active span gets wider tracking, heavier weight, and larger optical size; inactive spans get reduced opacity. CSS transitions on those properties are set once by `prepareSpeechType`.
 
 `startSpeechType` wires a `SpeechSynthesisUtterance` to the browser's Web Speech API, listens for `boundary` events, maps the character offset to a word index, and calls `applySpeechType` on each event. It returns a `stop` function that cancels synthesis and removes all emphasis.
 
@@ -194,7 +200,7 @@ const opts: SpeechTypeOptions = {
 | `useSpeechType` | React hook: `(ref, activeWordIndex, options?)` |
 | `SpeechTypeText` | React component. Controlled via `activeWordIndex` prop. Forwards ref. |
 | `SpeechTypeOptions` | TypeScript interface for all options. |
-| `SPEECH_CLASSES` | CSS class names injected by the algorithm (`st-word`, `st-active`, `st-inactive`). |
+| `SPEECH_CLASSES` | CSS class names injected by the algorithm (`st-word`). |
 
 ---
 

@@ -52,24 +52,31 @@ function collectTextNodes(node: Node, result: Text[] = []): Text[] {
 export function prepareSpeechType(el: HTMLElement, options: SpeechTypeOptions = {}): HTMLElement[] {
 	if (typeof window === 'undefined') return []
 
+	// Save scroll position — iOS Safari does not support overflow-anchor: none, so innerHTML
+	// mutations can jump the page. Restore after mutations via requestAnimationFrame.
+	const scrollY = window.scrollY
+
 	// Save original HTML if not already saved, then restore it before re-wrapping
 	const existing = states.get(el)
 	const originalHTML = existing?.originalHTML ?? el.innerHTML
 	el.innerHTML = originalHTML
 
-	// Split the full text into word tokens and whitespace tokens
+	// Split the full text into word tokens and whitespace tokens.
+	// Note: inline child elements (<em>, <strong>, etc.) are intentionally flattened here —
+	// prepareSpeechType reads textContent to build a flat word map for speech-boundary alignment.
 	const text = el.textContent ?? ''
 	const tokens = text.split(/(\s+)/)
 	el.innerHTML = tokens.map(token => {
 		if (!token || /^\s+$/.test(token)) return token
-		return `<span class="${SPEECH_CLASSES.word}">${token}</span>`
+		return `<span class="${SPEECH_CLASSES.word}" aria-hidden="true">${token}</span>`
 	}).join('')
 
-	const wordSpans = Array.from(el.querySelectorAll(`.${SPEECH_CLASSES.word}`)) as HTMLElement[]
+	// Collect live span references after innerHTML assignment
+	const liveSpans = Array.from(el.querySelectorAll<HTMLElement>(`.${SPEECH_CLASSES.word}`))
 
 	// Apply base transition to all word spans
 	const transitionMs = options.transitionMs ?? 80
-	wordSpans.forEach(span => {
+	liveSpans.forEach(span => {
 		span.style.display = 'inline'
 		span.style.transition = [
 			`font-variation-settings ${transitionMs}ms ease`,
@@ -78,8 +85,28 @@ export function prepareSpeechType(el: HTMLElement, options: SpeechTypeOptions = 
 		].join(', ')
 	})
 
-	states.set(el, { originalHTML, wordSpans, utterance: null, activeIndex: -1 })
-	return wordSpans
+	// Inject an off-screen aria-live region so screen readers are notified of the active word.
+	// Re-use an existing one if prepareSpeechType is called again on the same element.
+	let liveRegion = el.querySelector<HTMLElement>('[data-st-live]')
+	if (!liveRegion) {
+		liveRegion = document.createElement('span')
+		liveRegion.setAttribute('data-st-live', '')
+		liveRegion.setAttribute('aria-live', 'polite')
+		liveRegion.setAttribute('aria-atomic', 'true')
+		liveRegion.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0'
+		el.appendChild(liveRegion)
+	}
+
+	states.set(el, { originalHTML, wordSpans: liveSpans, utterance: null, activeIndex: -1 })
+
+	// Restore scroll position after innerHTML mutations (iOS Safari guard)
+	requestAnimationFrame(() => {
+		if (Math.abs(window.scrollY - scrollY) > 2) {
+			window.scrollTo({ top: scrollY, behavior: 'instant' })
+		}
+	})
+
+	return liveSpans
 }
 
 /**
@@ -102,12 +129,20 @@ export function applySpeechType(el: HTMLElement, activeIndex: number, options: S
 
 	state.activeIndex = activeIndex
 
+	// Update aria-live region so screen readers are notified of the active word
+	const liveRegion = el.querySelector<HTMLElement>('[data-st-live]')
+	if (liveRegion) {
+		liveRegion.textContent = activeIndex >= 0 ? (state.wordSpans[activeIndex]?.textContent ?? '') : ''
+	}
+
 	state.wordSpans.forEach((span, i) => {
 		if (i === activeIndex) {
+			span.setAttribute('aria-current', 'true')
 			span.style.fontVariationSettings = `"wght" ${activeWeight}, "opsz" ${activeOpsz}`
 			span.style.letterSpacing = `${activeTracking}em`
 			span.style.opacity = '1'
 		} else {
+			span.removeAttribute('aria-current')
 			span.style.fontVariationSettings = ''
 			span.style.letterSpacing = ''
 			span.style.opacity = activeIndex === -1 ? '1' : String(inactiveOpacity)
@@ -124,12 +159,18 @@ export function applySpeechType(el: HTMLElement, activeIndex: number, options: S
  * @param options - SpeechTypeOptions (merged with defaults)
  */
 export function startSpeechType(el: HTMLElement, options: SpeechTypeOptions = {}): () => void {
-	if (typeof window === 'undefined' || !('speechSynthesis' in window)) return () => {}
+	if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+		options.onUnsupported?.()
+		return () => {}
+	}
 
 	const wordSpans = prepareSpeechType(el, options)
-	const state = states.get(el)!
+	const state = states.get(el)
+	// prepareSpeechType always sets state when window is defined (SSR guard already passed above)
+	if (!state) return () => {}
 
-	// Cancel any existing speech before starting a new utterance
+	// Cancel any existing speech before starting a new utterance.
+	// This will fire onerror("interrupted") on the previous utterance, which is handled below.
 	window.speechSynthesis.cancel()
 
 	// Build the utterance text from word spans (joined with spaces)
@@ -138,6 +179,12 @@ export function startSpeechType(el: HTMLElement, options: SpeechTypeOptions = {}
 	utterance.rate = options.rate ?? 0.9
 	utterance.pitch = options.pitch ?? 1
 	utterance.volume = options.volume ?? 1
+
+	// Resolve visual option values once — they are constant for the lifetime of this utterance
+	const activeTracking = options.activeTracking ?? 0.06
+	const activeWeight = options.activeWeight ?? 700
+	const activeOpsz = options.activeOpsz ?? 24
+	const resolvedOptions: SpeechTypeOptions = { ...options, activeTracking, activeWeight, activeOpsz }
 
 	// Build a map from character position to word index for boundary matching.
 	// Each word occupies charPos … charPos + wordLength, then +1 for the joined space.
@@ -148,31 +195,45 @@ export function startSpeechType(el: HTMLElement, options: SpeechTypeOptions = {}
 		return pos
 	})
 
+	// Cancellation token: set to true when this utterance is superseded so stale boundary
+	// events from the old utterance cannot corrupt emphasis on the new content.
+	let cancelled = false
+
 	utterance.onboundary = (e: SpeechSynthesisEvent) => {
-		if (e.name !== 'word') return
+		if (cancelled || e.name !== 'word') return
 		const idx = wordCharPositions.findIndex((pos, i) => {
 			const nextPos = wordCharPositions[i + 1] ?? Infinity
 			return e.charIndex >= pos && e.charIndex < nextPos
 		})
-		if (idx !== -1) applySpeechType(el, idx, options)
+		if (idx !== -1) applySpeechType(el, idx, resolvedOptions)
 	}
 
 	utterance.onend = () => {
-		applySpeechType(el, -1, options)
+		if (cancelled) return
+		applySpeechType(el, -1, resolvedOptions)
 		state.utterance = null
 	}
 
-	utterance.onerror = () => {
-		applySpeechType(el, -1, options)
-		state.utterance = null
+	utterance.onerror = (e: SpeechSynthesisErrorEvent) => {
+		// "interrupted" is a normal cancellation (e.g. a second startSpeechType call) — not an error.
+		// All other error codes indicate a real problem; surface them via onError if provided.
+		if (e.error !== 'interrupted') {
+			options.onError?.(e)
+		}
+		if (!cancelled) {
+			applySpeechType(el, -1, resolvedOptions)
+			state.utterance = null
+		}
 	}
 
 	state.utterance = utterance
 	window.speechSynthesis.speak(utterance)
 
 	return () => {
+		if (cancelled) return
+		cancelled = true
 		window.speechSynthesis.cancel()
-		applySpeechType(el, -1, options)
+		applySpeechType(el, -1, resolvedOptions)
 		state.utterance = null
 	}
 }

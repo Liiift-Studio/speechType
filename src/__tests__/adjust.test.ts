@@ -68,7 +68,8 @@ describe('prepareSpeechType', () => {
 		const el = makeEl('')
 		const spans = prepareSpeechType(el)
 		expect(spans.length).toBe(0)
-		expect(el.innerHTML).toBe('')
+		// The aria-live region is injected even on empty elements; no word spans should be present
+		expect(el.querySelectorAll('.st-word').length).toBe(0)
 	})
 
 	it('applies transition styles to each word span', () => {
@@ -142,6 +143,38 @@ describe('removeSpeechType', () => {
 		const el = makeEl('text')
 		expect(() => removeSpeechType(el)).not.toThrow()
 	})
+
+	it('calls speechSynthesis.cancel() when active speech exists (via startSpeechType)', () => {
+		const el = makeEl('one two three')
+		startSpeechType(el)
+		// Verify speech was started
+		expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(1)
+		// Now remove — should cancel
+		removeSpeechType(el)
+		expect(window.speechSynthesis.cancel).toHaveBeenCalled()
+		// HTML should be restored to original flat text
+		expect(el.querySelector('.st-word')).toBeNull()
+	})
+
+	it('flattens inline markup during prepareSpeechType — em content becomes plain text word span', () => {
+		const el = makeEl('Hello <em>world</em>')
+		prepareSpeechType(el)
+		// The <em> should be gone; both words should be wrapped as flat spans
+		expect(el.querySelector('em')).toBeNull()
+		const spans = el.querySelectorAll('.st-word')
+		expect(spans.length).toBe(2)
+		expect(spans[0].textContent).toBe('Hello')
+		expect(spans[1].textContent).toBe('world')
+	})
+
+	it('applySpeechType still works after prepareSpeechType with inline markup', () => {
+		const el = makeEl('Hello <em>world</em>')
+		prepareSpeechType(el)
+		applySpeechType(el, 1)
+		const spans = el.querySelectorAll<HTMLElement>('.st-word')
+		expect(spans[1].style.opacity).toBe('1')
+		expect(spans[0].style.opacity).not.toBe('1')
+	})
 })
 
 // ─── getCleanHTML ─────────────────────────────────────────────────────────────
@@ -213,14 +246,125 @@ describe('startSpeechType', () => {
 		expect(spans[2].style.opacity).not.toBe('1')
 	})
 
-	it('is a no-op when speechSynthesis is unavailable (SSR-like)', () => {
+	it('boundary at charIndex 0 emphasises the first word', () => {
+		const el = makeEl('alpha beta gamma')
+		startSpeechType(el)
+		const utterance = (window.SpeechSynthesisUtterance as ReturnType<typeof vi.fn>).mock.results[0].value
+		utterance.onboundary?.({ name: 'word', charIndex: 0 } as SpeechSynthesisEvent)
+		const spans = el.querySelectorAll<HTMLElement>(`.${SPEECH_CLASSES.word}`)
+		expect(spans[0].style.opacity).toBe('1')
+		expect(spans[1].style.opacity).not.toBe('1')
+	})
+
+	it('boundary at charIndex of last word emphasises the last word', () => {
+		const el = makeEl('alpha beta gamma')
+		// 'alpha beta ' = 11 chars, so last word 'gamma' starts at charIndex 11
+		startSpeechType(el)
+		const utterance = (window.SpeechSynthesisUtterance as ReturnType<typeof vi.fn>).mock.results[0].value
+		utterance.onboundary?.({ name: 'word', charIndex: 11 } as SpeechSynthesisEvent)
+		const spans = el.querySelectorAll<HTMLElement>(`.${SPEECH_CLASSES.word}`)
+		expect(spans[2].style.opacity).toBe('1')
+		expect(spans[0].style.opacity).not.toBe('1')
+	})
+
+	it('boundary charIndex beyond all words does not throw and does not change emphasis', () => {
+		const el = makeEl('alpha beta')
+		startSpeechType(el)
+		const utterance = (window.SpeechSynthesisUtterance as ReturnType<typeof vi.fn>).mock.results[0].value
+		// charIndex 9999 is past the end of the word list — idx will be -1, applySpeechType not called
+		expect(() => utterance.onboundary?.({ name: 'word', charIndex: 9999 } as SpeechSynthesisEvent)).not.toThrow()
+	})
+
+	it('sentence-type boundary event is ignored', () => {
+		const el = makeEl('alpha beta gamma')
+		startSpeechType(el)
+		const utterance = (window.SpeechSynthesisUtterance as ReturnType<typeof vi.fn>).mock.results[0].value
+		// 'sentence' boundary should be ignored; no spans should be emphasised
+		utterance.onboundary?.({ name: 'sentence', charIndex: 0 } as SpeechSynthesisEvent)
+		const spans = el.querySelectorAll<HTMLElement>(`.${SPEECH_CLASSES.word}`)
+		spans.forEach(span => {
+			expect(span.style.opacity).not.toBe('1')
+		})
+	})
+
+	it('calling startSpeechType twice cancels first utterance and emphasises new content correctly', () => {
+		const el = makeEl('one two three')
+		startSpeechType(el)
+		expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(1)
+		// Call again — should cancel first and start fresh
+		startSpeechType(el)
+		expect(window.speechSynthesis.cancel).toHaveBeenCalled()
+		expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(2)
+	})
+
+	it('rate, pitch, and volume options are forwarded to the utterance', () => {
+		const el = makeEl('hello world')
+		startSpeechType(el, { rate: 1.5, pitch: 0.8, volume: 0.5 })
+		const utterance = (window.SpeechSynthesisUtterance as ReturnType<typeof vi.fn>).mock.results[0].value
+		expect(utterance.rate).toBe(1.5)
+		expect(utterance.pitch).toBe(0.8)
+		expect(utterance.volume).toBe(0.5)
+	})
+
+	it('onUnsupported callback is called when speechSynthesis is unavailable', () => {
 		const origSS = (window as Window & { speechSynthesis?: SpeechSynthesis }).speechSynthesis
 		// @ts-expect-error — simulate no speechSynthesis
 		delete window.speechSynthesis
+		const onUnsupported = vi.fn()
 		const el = makeEl('test')
-		expect(() => startSpeechType(el)).not.toThrow()
-		// Restore
-		;(window as Window & { speechSynthesis?: SpeechSynthesis }).speechSynthesis = origSS
+		try {
+			startSpeechType(el, { onUnsupported })
+			expect(onUnsupported).toHaveBeenCalledTimes(1)
+		} finally {
+			;(window as Window & { speechSynthesis?: SpeechSynthesis }).speechSynthesis = origSS
+		}
+	})
+
+	it('onerror with "interrupted" does not call onError callback', () => {
+		const onError = vi.fn()
+		const el = makeEl('hello world')
+		startSpeechType(el, { onError })
+		const utterance = (window.SpeechSynthesisUtterance as ReturnType<typeof vi.fn>).mock.results[0].value
+		utterance.onerror?.({ error: 'interrupted' } as SpeechSynthesisErrorEvent)
+		expect(onError).not.toHaveBeenCalled()
+	})
+
+	it('onerror with real error code calls onError callback', () => {
+		const onError = vi.fn()
+		const el = makeEl('hello world')
+		startSpeechType(el, { onError })
+		const utterance = (window.SpeechSynthesisUtterance as ReturnType<typeof vi.fn>).mock.results[0].value
+		const fakeEvent = { error: 'not-allowed' } as SpeechSynthesisErrorEvent
+		utterance.onerror?.(fakeEvent)
+		expect(onError).toHaveBeenCalledWith(fakeEvent)
+	})
+
+	it('onend resets all spans to full opacity and clears utterance', () => {
+		const el = makeEl('one two three')
+		startSpeechType(el)
+		const utterance = (window.SpeechSynthesisUtterance as ReturnType<typeof vi.fn>).mock.results[0].value
+		// Activate a word first
+		utterance.onboundary?.({ name: 'word', charIndex: 0 } as SpeechSynthesisEvent)
+		const spans = el.querySelectorAll<HTMLElement>(`.${SPEECH_CLASSES.word}`)
+		expect(spans[0].style.opacity).toBe('1')
+		// Fire onend
+		utterance.onend?.()
+		spans.forEach(span => {
+			expect(span.style.opacity).toBe('1')
+		})
+	})
+
+	it('is a no-op when speechSynthesis is unavailable (SSR-like)', () => {
+		const origSS = (window as Window & { speechSynthesis?: SpeechSynthesis }).speechSynthesis
+		try {
+			// @ts-expect-error — simulate no speechSynthesis
+			delete window.speechSynthesis
+			const el = makeEl('test')
+			expect(() => startSpeechType(el)).not.toThrow()
+		} finally {
+			// Always restore so later tests are not broken
+			;(window as Window & { speechSynthesis?: SpeechSynthesis }).speechSynthesis = origSS
+		}
 	})
 })
 
@@ -229,11 +373,15 @@ describe('startSpeechType', () => {
 describe('SSR safety', () => {
 	it('prepareSpeechType returns [] when window is undefined', () => {
 		const origWindow = globalThis.window
-		// @ts-expect-error — simulate SSR
-		delete globalThis.window
-		const el = makeEl('test')
-		const result = prepareSpeechType(el)
-		expect(result).toEqual([])
-		globalThis.window = origWindow
+		try {
+			// @ts-expect-error — simulate SSR
+			delete globalThis.window
+			const el = makeEl('test')
+			const result = prepareSpeechType(el)
+			expect(result).toEqual([])
+		} finally {
+			// Always restore window so subsequent tests are not broken
+			globalThis.window = origWindow
+		}
 	})
 })
