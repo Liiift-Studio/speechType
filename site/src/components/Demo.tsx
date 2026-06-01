@@ -31,17 +31,29 @@ export default function Demo() {
 	const deferredTransition = useDeferredValue(transitionMs)
 
 	// Ref to the paragraph element for imperative startSpeechType calls
-	const paraRef = useRef<HTMLElement>(null)
+	const paraRef = useRef<HTMLParagraphElement>(null)
 
 	// Stop function ref — holds the cleanup returned by startSpeechType
 	const stopRef = useRef<(() => void) | null>(null)
 
-	// Detect SpeechSynthesis support on mount
+	// Poll interval ref — stored so the interval can be cleared on unmount
+	const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+	// Aria-live announcement text for screen readers
+	const [announcement, setAnnouncement] = useState('')
+
+	// Detect SpeechSynthesis support on mount; clear poll interval on unmount
 	useEffect(() => {
 		setSupported('speechSynthesis' in window)
+		return () => {
+			if (pollRef.current !== null) {
+				clearInterval(pollRef.current)
+				pollRef.current = null
+			}
+		}
 	}, [])
 
-	// Cancel speech and reset when rate changes while speaking
+	// Cancel speech when rate changes while speaking (rate change takes effect on next speak)
 	useEffect(() => {
 		if (speaking) {
 			handleStop()
@@ -59,14 +71,24 @@ export default function Demo() {
 		rate,
 	}
 
-	/** Start speech synthesis — drives emphasis imperatively via startSpeechType */
+	/** Start speech synthesis — drives emphasis imperatively via startSpeechType.
+	 *  IMPORTANT: this function must be called directly from a user-gesture handler
+	 *  (onClick, onKeyDown, etc.) — iOS Safari blocks SpeechSynthesis when speak()
+	 *  is deferred to a timeout or async callback. */
 	function handleSpeak() {
 		const el = paraRef.current
 		if (!el) return
 
+		// Clear any existing poll before starting a new one
+		if (pollRef.current !== null) {
+			clearInterval(pollRef.current)
+			pollRef.current = null
+		}
+
 		// Reset manual slider so React state doesn't fight the imperative emphasis
 		setActiveWordIndex(-1)
 		setSpeaking(true)
+		setAnnouncement('Speech started')
 
 		stopRef.current = startSpeechType(el, {
 			...options,
@@ -75,19 +97,28 @@ export default function Demo() {
 
 		// Detect when speech ends (utterance onend fires internally, but we also watch)
 		// Poll speechSynthesis.speaking — simple and reliable across browsers
-		const pollId = setInterval(() => {
+		pollRef.current = setInterval(() => {
 			if (!window.speechSynthesis.speaking) {
-				clearInterval(pollId)
+				clearInterval(pollRef.current!)
+				pollRef.current = null
 				setSpeaking(false)
+				setActiveWordIndex(-1)
+				setAnnouncement('Speech ended')
 			}
 		}, 200)
 	}
 
-	/** Stop speech synthesis */
+	/** Stop speech synthesis and clear the poll interval */
 	function handleStop() {
+		if (pollRef.current !== null) {
+			clearInterval(pollRef.current)
+			pollRef.current = null
+		}
 		stopRef.current?.()
 		stopRef.current = null
 		setSpeaking(false)
+		setActiveWordIndex(-1)
+		setAnnouncement('Speech stopped')
 	}
 
 	// Determine which word text to show next to the slider value
@@ -97,6 +128,11 @@ export default function Demo() {
 
 	return (
 		<div className="w-full flex flex-col gap-8">
+
+			{/* Screen-reader live region — announces speech start/stop events */}
+			<div aria-live="polite" aria-atomic="true" className="sr-only">
+				{announcement}
+			</div>
 
 			{/* Browser support notice */}
 			{!supported && (
@@ -113,6 +149,8 @@ export default function Demo() {
 					<div className="flex items-center gap-4">
 						<button
 							onClick={speaking ? handleStop : handleSpeak}
+							aria-pressed={speaking}
+							aria-label={speaking ? 'Stop speech synthesis' : 'Speak paragraph aloud using speech synthesis'}
 							title={speaking ? 'Stop speech synthesis and reset emphasis' : 'Read the paragraph aloud using speech synthesis — each word is emphasised as it is spoken'}
 							className="flex items-center gap-2 text-sm px-4 py-2 rounded-full border transition-all"
 							style={{
@@ -121,7 +159,8 @@ export default function Demo() {
 								background: speaking ? 'var(--btn-bg)' : 'transparent',
 							}}
 						>
-							<span>{speaking ? '◼ Stop' : '▶ Speak'}</span>
+							<span aria-hidden="true">{speaking ? '◼' : '▶'}</span>
+							<span>{speaking ? 'Stop' : 'Speak'}</span>
 						</button>
 						{speaking && (
 							<span className="text-xs opacity-50 italic">Listening…</span>
@@ -205,7 +244,7 @@ export default function Demo() {
 						step={0.1}
 						value={rate}
 						aria-label="Speech rate (0.5 = slow, 2.0 = fast)"
-						title="Speed at which the paragraph is read aloud — slower rates give the typography more time on each word; changing this restarts playback"
+						title="Speed at which the paragraph is read aloud — slower rates give the typography more time on each word"
 						onChange={e => setRate(Number(e.target.value))}
 						onTouchStart={e => e.stopPropagation()}
 						style={{ touchAction: 'none' }}
@@ -239,7 +278,7 @@ export default function Demo() {
 				style={{ background: 'rgba(212,184,240,0.04)', border: '1px solid rgba(212,184,240,0.12)' }}
 			>
 				<SpeechTypeText
-					ref={paraRef as React.RefObject<HTMLParagraphElement>}
+					ref={paraRef}
 					activeWordIndex={activeWordIndex}
 					as="p"
 					{...options}
