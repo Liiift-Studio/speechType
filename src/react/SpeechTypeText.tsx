@@ -5,8 +5,15 @@ import { useRef, forwardRef, useImperativeHandle, type ElementType } from 'react
 import { useSpeechType } from './useSpeechType'
 import type { SpeechTypeOptions } from '../core/types'
 
+// HTML attributes forwarded to the DOM element, minus any that SpeechTypeOptions already owns
+// (prevents type conflicts on shared names like onError) and minus the props we declare explicitly.
+type HTMLForwardProps = Omit<
+	React.HTMLAttributes<HTMLElement>,
+	keyof SpeechTypeOptions | 'children' | 'style' | 'className'
+>
+
 /** Props accepted by SpeechTypeText */
-interface SpeechTypeTextProps extends SpeechTypeOptions {
+interface SpeechTypeTextProps extends SpeechTypeOptions, HTMLForwardProps {
 	/** Index of the word currently being spoken (-1 = no active word). Default: -1 */
 	activeWordIndex: number
 	/** HTML element tag to render. Default: 'p' */
@@ -17,12 +24,6 @@ interface SpeechTypeTextProps extends SpeechTypeOptions {
 	style?: React.CSSProperties
 	/** Class name forwarded to the rendered element */
 	className?: string
-	/** Called when speech synthesis is unavailable in this browser */
-	onUnsupported?: () => void
-	/** Called when a real speech error occurs (excludes normal 'interrupted' cancellations) */
-	onError?: (event: SpeechSynthesisErrorEvent) => void
-	/** Any additional HTML attributes (aria-*, data-*, role, lang, etc.) are forwarded to the DOM element */
-	[key: string]: unknown
 }
 
 /**
@@ -75,10 +76,16 @@ export const SpeechTypeText = forwardRef<HTMLElement, SpeechTypeTextProps>(
 
 		useSpeechType(innerRef, activeWordIndex, options)
 
+		// Tag is always an intrinsic element in practice (default 'p').
+		// Casting avoids the polymorphic-component type complexity for ref + htmlProps.
+		const El = Tag as React.ComponentType<
+			React.HTMLAttributes<HTMLElement> & React.RefAttributes<HTMLElement>
+		>
+
 		return (
-			<Tag ref={innerRef} style={style} className={className} {...htmlProps}>
+			<El ref={innerRef} style={style} className={className} {...htmlProps}>
 				{children}
-			</Tag>
+			</El>
 		)
 	},
 )

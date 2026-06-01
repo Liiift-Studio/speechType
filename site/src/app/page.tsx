@@ -15,8 +15,8 @@ export default function Home() {
 				<div className="flex flex-col gap-2">
 					<p className="text-xs uppercase tracking-widest opacity-50">speechtype</p>
 					<h1 className="text-4xl lg:text-8xl xl:text-9xl" style={{ fontFamily: "var(--font-merriweather), serif", fontVariationSettings: '"wght" 300, "opsz" 144', lineHeight: "1.05em" }}>
-						<MagnetChar as="span" minWeight={300} maxWeight={800} spreadRadius={220} fixedAxes={{ opsz: 144 }}>Typography that</MagnetChar><br />
-						<MagnetChar as="span" minWeight={300} maxWeight={800} spreadRadius={220} fixedAxes={{ opsz: 144 }} style={{ opacity: 0.5, fontStyle: "italic" }}>follows your voice.</MagnetChar>
+						<span>Typography that</span><br />
+						<span style={{ opacity: 0.5, fontStyle: "italic" }}>follows your voice.</span>
 					</h1>
 				</div>
 				<div className="flex items-center gap-4">
@@ -33,7 +33,7 @@ export default function Home() {
 
 			{/* Demo */}
 			<section className="w-full max-w-2xl lg:max-w-5xl flex flex-col gap-4">
-				<p className="text-xs uppercase tracking-widest opacity-50">Live demo — press Speak or step with the Word slider</p>
+				<p className="text-xs uppercase tracking-widest opacity-50">Live demo — step with the Word slider or press Speak if supported</p>
 				<div className="rounded-xl -mx-8 px-8 py-8" style={{ background: "rgba(0,0,0,0.25)", overflow: 'hidden' }}>
 					<Demo />
 				</div>
@@ -53,7 +53,7 @@ export default function Home() {
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold opacity-100 text-base">Imperative for performance</p>
-						<p>During active speech, emphasis is applied imperatively via <code className="text-xs font-mono">applySpeechType</code> — bypassing React state and re-renders entirely. The boundary event fires, the span style changes, and the frame is painted. No scheduling, no batching delay.</p>
+						<p>During active speech, <code className="text-xs font-mono">startSpeechType</code> handles each boundary event directly — updating span styles without touching React state or triggering re-renders. The boundary event fires, the span style changes, and the frame is painted. No scheduling, no batching delay.</p>
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold opacity-100 text-base">React or vanilla JS</p>
@@ -71,9 +71,15 @@ export default function Home() {
 				<div className="flex flex-col gap-8 text-sm">
 					<div className="flex flex-col gap-3">
 						<p className="opacity-50">Drop-in component</p>
-						<CodeBlock code={`import { SpeechTypeText } from '@liiift-studio/speechtype'
+						<CodeBlock code={`import { SpeechTypeText, startSpeechType } from '@liiift-studio/speechtype'
+import { useRef, useState } from 'react'
 
-<SpeechTypeText activeWordIndex={activeWordIndex}>
+// Drive activeWordIndex via startSpeechType or your own state
+const [activeWordIndex, setActiveWordIndex] = useState(-1)
+const ref = useRef<HTMLParagraphElement>(null)
+
+// startSpeechType updates the spans imperatively during speech:
+<SpeechTypeText ref={ref} activeWordIndex={activeWordIndex}>
   The voice knows where it is. The page does not.
 </SpeechTypeText>`} />
 					</div>
@@ -99,7 +105,7 @@ return <p ref={ref}>Every word spoken carries its own weight.</p>`} />
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="opacity-50">Options</p>
-						<table className="w-full text-xs">
+						<table className="w-full text-xs" aria-label="SpeechTypeOptions API reference">
 							<thead><tr className="opacity-50 text-left"><th className="pb-2 pr-6 font-normal">Option</th><th className="pb-2 pr-6 font-normal">Default</th><th className="pb-2 font-normal">Description</th></tr></thead>
 							<tbody className="opacity-70">
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">activeTracking</td><td className="py-2 pr-6">0.06</td><td className="py-2">Letter-spacing on the active word in em.</td></tr>
@@ -107,9 +113,11 @@ return <p ref={ref}>Every word spoken carries its own weight.</p>`} />
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">activeOpsz</td><td className="py-2 pr-6">24</td><td className="py-2">opsz axis value on the active word.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">inactiveOpacity</td><td className="py-2 pr-6">0.45</td><td className="py-2">Opacity of words not currently spoken.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">transitionMs</td><td className="py-2 pr-6">80</td><td className="py-2">CSS transition duration in ms for style changes.</td></tr>
-								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">rate</td><td className="py-2 pr-6">0.9</td><td className="py-2">Speech rate (0.1–10). Only applies when using startSpeechType.</td></tr>
-								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">pitch</td><td className="py-2 pr-6">1</td><td className="py-2">Speech pitch (0–2).</td></tr>
-								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">volume</td><td className="py-2 pr-6">1</td><td className="py-2">Speech volume (0–1).</td></tr>
+								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">rate</td><td className="py-2 pr-6">0.9</td><td className="py-2">Speech rate (0.1–10). Accepted by all paths; speech options (rate, pitch, volume) are silently ignored by SpeechTypeText and useSpeechType.</td></tr>
+								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">pitch</td><td className="py-2 pr-6">1</td><td className="py-2">Speech pitch (0–2). Silently ignored by SpeechTypeText and useSpeechType.</td></tr>
+								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">volume</td><td className="py-2 pr-6">1</td><td className="py-2">Speech volume (0–1). Silently ignored by SpeechTypeText and useSpeechType.</td></tr>
+								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">onUnsupported</td><td className="py-2 pr-6">—</td><td className="py-2">Called when the browser does not support SpeechSynthesis.</td></tr>
+								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">onError</td><td className="py-2 pr-6">—</td><td className="py-2">Called with the SpeechSynthesisErrorEvent if synthesis errors.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">as</td><td className="py-2 pr-6">&apos;p&apos;</td><td className="py-2">HTML element to render. (SpeechTypeText only)</td></tr>
 							</tbody>
 						</table>
