@@ -1,4 +1,4 @@
-// OG image for speechtype.liiift-studio.com — generated at build time via next/og
+// OG image for speechtype.vercel.app — generated at build time via next/og
 import { ImageResponse } from 'next/og'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -43,7 +43,7 @@ export default async function Image() {
 						<span>Web Speech API</span><span style={{ opacity: 0.4 }}>·</span>
 						<span>React + Vanilla JS</span>
 					</div>
-					<div style={{ fontSize: 13, color: '#93909e', letterSpacing: '0.04em' }}>speechtype.liiift-studio.com</div>
+					<div style={{ fontSize: 13, color: '#93909e', letterSpacing: '0.04em' }}>speechtype.vercel.app</div>
 				</div>
 			</div>
 		),
