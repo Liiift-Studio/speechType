@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 	openGraph: {
 		title: "speechType — Typographic emphasis synced to speech",
 		description: "Per-word typographic emphasis synced to Web Speech API boundary events. Each spoken word receives wider tracking, heavier weight, and larger optical size.",
-		url: "https://speechtype.com",
+		url: "https://speechtype.liiift-studio.com",
 		siteName: "speechType",
 		type: "website",
 		images: [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: "Example sentence with one word rendered bolder and tracked out, synced to speech" }],
@@ -24,8 +24,8 @@ export const metadata: Metadata = {
 		description: "Per-word typographic emphasis synced to Web Speech API boundary events. Each spoken word receives wider tracking, heavier weight, and larger optical size.",
 		images: ["/opengraph-image.png"],
 	},
-	metadataBase: new URL("https://speechtype.com"),
-	alternates: { canonical: "https://speechtype.com" },
+	metadataBase: new URL("https://speechtype.liiift-studio.com"),
+	alternates: { canonical: "https://speechtype.liiift-studio.com" },
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

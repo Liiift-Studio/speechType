@@ -1,11 +1,11 @@
-// speechType/site/src/app/sitemap.ts — sitemap for speechtype.com
+// speechType/site/src/app/sitemap.ts — sitemap for speechtype.liiift-studio.com
 import type { MetadataRoute } from 'next'
 
-/** Static sitemap for speechtype.com */
+/** Static sitemap for speechtype.liiift-studio.com */
 export default function sitemap(): MetadataRoute.Sitemap {
 	return [
 		{
-			url: 'https://speechtype.com',
+			url: 'https://speechtype.liiift-studio.com',
 			lastModified: new Date(),
 			changeFrequency: 'monthly',
 			priority: 1,
