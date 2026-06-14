@@ -136,7 +136,7 @@ export default function Demo() {
 
 			{/* Browser support notice */}
 			{!supported && (
-				<p className="text-xs opacity-60 italic">
+				<p className="text-xs text-muted italic">
 					Your browser does not support the Web Speech API. Use the Word slider below to step through the demo manually.
 				</p>
 			)}
@@ -163,14 +163,14 @@ export default function Demo() {
 							<span>{speaking ? 'Stop' : 'Speak'}</span>
 						</button>
 						{speaking && (
-							<span className="text-xs opacity-50 italic">Listening…</span>
+							<span className="text-xs text-muted italic">Listening…</span>
 						)}
 					</div>
 				)}
 
 				{/* Manual word slider */}
 				<div className="flex flex-col gap-1">
-					<div className="flex justify-between text-xs uppercase tracking-widest opacity-50">
+					<div className="flex justify-between text-xs uppercase tracking-[0.12em] text-muted">
 						<span>Word</span>
 						<span className="tabular-nums italic normal-case">{currentWordText}</span>
 					</div>
@@ -193,7 +193,7 @@ export default function Demo() {
 
 				{/* Active weight slider */}
 				<div className="flex flex-col gap-1">
-					<div className="flex justify-between text-xs uppercase tracking-widest opacity-50">
+					<div className="flex justify-between text-xs uppercase tracking-[0.12em] text-muted">
 						<span>Active weight</span>
 						<span className="tabular-nums">{activeWeight}</span>
 					</div>
@@ -213,7 +213,7 @@ export default function Demo() {
 
 				{/* Inactive opacity slider */}
 				<div className="flex flex-col gap-1">
-					<div className="flex justify-between text-xs uppercase tracking-widest opacity-50">
+					<div className="flex justify-between text-xs uppercase tracking-[0.12em] text-muted">
 						<span>Inactive opacity</span>
 						<span className="tabular-nums">{inactiveOpacity.toFixed(2)}</span>
 					</div>
@@ -233,7 +233,7 @@ export default function Demo() {
 
 				{/* Rate slider */}
 				<div className="flex flex-col gap-1">
-					<div className="flex justify-between text-xs uppercase tracking-widest opacity-50">
+					<div className="flex justify-between text-xs uppercase tracking-[0.12em] text-muted">
 						<span>Rate</span>
 						<span className="tabular-nums">{rate.toFixed(1)}×</span>
 					</div>
@@ -253,7 +253,7 @@ export default function Demo() {
 
 				{/* Transition slider */}
 				<div className="flex flex-col gap-1">
-					<div className="flex justify-between text-xs uppercase tracking-widest opacity-50">
+					<div className="flex justify-between text-xs uppercase tracking-[0.12em] text-muted">
 						<span>Transition</span>
 						<span className="tabular-nums">{transitionMs}ms</span>
 					</div>
@@ -293,7 +293,7 @@ export default function Demo() {
 				</SpeechTypeText>
 			</div>
 
-			<p className="text-xs opacity-50 italic" style={{ lineHeight: "1.8" }}>
+			<p className="text-xs text-muted italic" style={{ lineHeight: "1.8" }}>
 				Press Speak to hear the paragraph read aloud — each word is emphasised as it is spoken. Use the Word slider to step through manually. Useful for accessibility tools, language learning, teleprompters, and any interface where voice and text need to stay connected.
 			</p>
 		</div>
